@@ -6,12 +6,22 @@ from pprint import pprint
 class SuperBlockSummary:
     def __init__(self, report):
         self.n_blocks = int(report[1])
-        self.n_indoes = int(report[2])
+        self.n_inodes = int(report[2])
         self.block_size = int(report[3])
         self.inode_size = int(report[4])
         self.blocks_per_group = int(report[5])
         self.inodes_per_group = int(report[6])
         self.first_non_reserved_inode = int(report[7])
+
+    def __str__(self):
+        s = "Number of blocks: {}\n".format(self.n_blocks)
+        s += "Number of inodes: {}\n".format(self.n_inodes)
+        s += "Block size: {}\n".format(self.block_size)
+        s += "Inode size: {}\n".format(self.inode_size)
+        s += "Blocks per group: {}\n".format(self.blocks_per_group)
+        s += "Inodes per group: {}\n".format(self.inodes_per_group)
+        s += "First non-reserved inode number: {}".format(self.first_non_reserved_inode)
+        return s
 
 class GroupSummary:
     def __init__(self, report):
@@ -26,25 +36,25 @@ class GroupSummary:
 
 class FreeBlockEntry:
     def __init__(self, report):
-        self.block_number = report[1]
+        self.block_number = int(report[1])
 
 class FreeInodeEntry:
     def __init__(self, report):
-        self.inode_number = report[1]
+        self.inode_number = int(report[1])
 
 class InodeSummary:
     def __init__(self, report):
         self.number = int(report[1])
         self.type = report[2]
-        self.mode = report[3]
-        self.owner = report[4]
-        self.group = report[5]
-        self.link_count = report[6]
+        self.mode = int(report[3])
+        self.owner = int(report[4])
+        self.group = int(report[5])
+        self.link_count = int(report[6])
         self.last_inode_change_time = report[7]
         self.last_modification_time = report[8]
         self.last_access_time = report[9]
-        self.file_size = report[10]
-        self.n_512_blocks = report[11]
+        self.file_size = int(report[10])
+        self.n_512_blocks = int(report[11])
 
         self.direct_refs = list()
         self.indirect_refs = list()
@@ -53,19 +63,10 @@ class InodeSummary:
 
         if self.type == 'f' or self.type == 'd':
             try:
-                self.direct_refs.append(int(report[12]))
-                self.direct_refs.append(int(report[13]))
-                self.direct_refs.append(int(report[14]))
-                self.direct_refs.append(int(report[15]))
-                self.direct_refs.append(int(report[16]))
-                self.direct_refs.append(int(report[17]))
-                self.direct_refs.append(int(report[18]))
-                self.direct_refs.append(int(report[19]))
-                self.direct_refs.append(int(report[20]))
-                self.direct_refs.append(int(report[21]))
-                self.direct_refs.append(int(report[22]))
-                self.direct_refs.append(int(report[23]))
+                for i in range(12, 24):
+                    self.direct_refs.append(int(report[i]))
 
+                # TODO - verify these with DIRENT and INDIRECT entries at some point
                 self.__populate_indir_refs(int(report[24]))
                 self.__populate_dbl_indir_refs(int(report[25]))
                 self.__populate_tpl_indir_refs(int(report[26]))
@@ -74,17 +75,35 @@ class InodeSummary:
                 pass
 
 
-        def __populate_indir_refs(self, row):
-            # TODO
-            self.indirect_refs.append(row)
+    def __populate_indir_refs(self, row):
+        # TODO
+        self.indirect_refs.append(row)
 
-        def __populate_dbl_indir_refs(self, row):
-            # TODO
-            self.dbl_indirect_refs.append(row)
+    def __populate_dbl_indir_refs(self, row):
+        # TODO
+        self.dbl_indirect_refs.append(row)
 
-        def __populate_tpl_indir_refs(self, row):
-            # TODO
-            self.tpl_indirect_refs.append(row)
+    def __populate_tpl_indir_refs(self, row):
+        # TODO
+        self.tpl_indirect_refs.append(row)
+
+    def __str__(self):
+        s = "Inode number {}\n".format(self.number)
+        s += "File type: {}\n".format(self.type)
+        s += "Mode: {}\n".format(self.mode)
+        s += "Owner: {}\n".format(self.owner)
+        s += "Group: {}\n".format(self.group)
+        s += "Link count: {}\n".format(self.link_count)
+        s += "Date last changed: {}\n".format(self.last_inode_change_time)
+        s += "Date last modified: {}\n".format(self.last_modification_time)
+        s += "Date last access: {}\n".format(self.last_access_time)
+        s += "File size: {}\n".format(self.file_size)
+        s += "Number of 512 byte blocks: {}\n".format(self.n_512_blocks)
+        s += "Direct references: {}\n".format(self.direct_refs)
+        s += "Indirect references: {}\n".format(self.indirect_refs)
+        s += "Double indirect references: {}\n".format(self.dbl_indirect_refs)
+        s += "Triple indirect references: {}\n".format(self.tpl_indirect_refs)
+        return s
 
 class DirectoryEntry:
     def __init__(self, report):
@@ -109,13 +128,21 @@ class Btype(Enum):
     INDIRECT = 2
     DOUBLE = 3
     TRIPLE = 4
+    UNKNOWN = 5
 
 class Block:
-    def __init__(self, n, t=Btype.FREE):
+    def __init__(self, n, t=Btype.UNKNOWN):
         self.number = n
         self.ref_count = 0
         self.inode_refs = []
         self.type = t
+
+    def __str__(self):
+        s = "Block {}\n".format(self.number)
+        s += "Referene count: {}\n".format(self.ref_count)
+        s += "Inode references: {}\n".format(self.inode_refs)
+        s += "Type: {}".format(self.type)
+        return s
 
 class BlockMap:
     def __init__(self, **kwargs):
@@ -136,25 +163,30 @@ class BlockMap:
 
 
         for i in range(self.size):
-            self.block_map[i] = None
+            self.block_map[i] = Block(i)
 
         for block in self.block_list:
             # TODO: verify assumption that we'll never get 2 blocks with same number but different contents
             self.block_map[block.number] = block
 
 
-    def insert(self, block):
+    def insert(self, block, inode_number):
         n = block.number
         try:
-            tmp = self.block_map[n] # make sure it doesn't exist yet
+            tmp = self.block_map[n] #if it already exists, increment reference count and append to inode_refs
+            self.block_map[n].ref_count += 1
+            self.block_map[n].inode_refs.append(inode_number)
+            # TODO
         except KeyError as e:
             # does not exist, insert
-            pass
+            self.block_map[n] = block
+
+
+
 
     def set_free(self, free_block_entries):
-        for block_num in free_block_entries:
-            b = Block(block_num, Btype.FREE)
-            self.block_map[block_num] = b
+        for entry in free_block_entries:
+            self.block_map[entry.block_number].type = Btype.FREE
 
     def check_blocks(self):
         pass
@@ -162,7 +194,7 @@ class BlockMap:
     def __str__(self):
         s = ""
         for i in range(self.size):
-            s += "{}: {}\n".format(i, self.block_map[i])
+            s += "{}:\n{}\n\n".format(i, self.block_map[i])
         return s
 
 class InodeMap:
@@ -179,11 +211,12 @@ class InodeMap:
         for i in range(self.size):
             self.inode_map[i] = None
 
-    def insert(self, inode):
+    def insert(self, inode_s):
         if self.count == self.size:
-            return False
-        elif self.inode_map[inode.number] == None:
-            self.inode_map[inode.number] = inode
+            # TODO: too many inodes, something went wrong
+            pass
+        elif self.inode_map[inode_s.number] == None:
+            self.inode_map[inode_s.number] = inode_s
         else: # an entry already exists, what TODO?
             pass
 
@@ -196,6 +229,12 @@ class InodeMap:
     def set_free(self, free_inode_entries):
         for inode_num in free_inode_entries:
             pass # TODO
+
+    def __str__(self):
+        s = ""
+        for i in range(1, self.size):
+            s += "{}:\n{}\n".format(i, self.inode_map[i])
+        return s
 
 class Inode:
     def __init__(self):
