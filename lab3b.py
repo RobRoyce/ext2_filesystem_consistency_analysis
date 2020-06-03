@@ -30,6 +30,8 @@ INODE = 'INODE'
 DIRENT = 'DIRENT'
 INDIRECT = 'INDIRECT'
 
+KiB = 1024
+
 def main(filename):
     if(debug):
         print("Filename set to {}...".format(filename))
@@ -84,37 +86,22 @@ def main(filename):
             print("lab3b: unable to read {}.".format(filename))
         sys.exit(EXBADEXEC)
 
-    # Build map using block number as index and a list of inodes that reference
-    # that block as items
+
+    if super_summary.n_blocks <= 0 or super_summary.n_blocks >= (KiB << 20):
+        # TODO: handle insanely large block counts
+        pass
+
+    block_map = BlockMap(size=super_summary.n_blocks)
+    inode_map = InodeMap(size=super_summary.n_indoes)
+    block_map.set_free(free_block_entries)
 
     if debug:
-        print("Beginning block map initialization.")
-        print("Number of blocks: {}".format(super_summary.n_blocks))
+        print("BlockMap size: {}".format(block_map.size))
+        print("BlockMap count: {}".format(block_map.count))
+        print("InodeMap size: {}".format(inode_map.size))
+        print("InodeMap count: {}".format(inode_map.count))
+        print(block_map)
 
-    for i in range(0, super_summary.n_blocks):
-        block_map[i] = list()
-
-    for inode in inode_summaries:
-        for ref in inode.direct_refs:
-            block_map[ref].append(inode.number)
-        for ref in inode.indirect_refs:
-            block_map[ref].append(inode.number)
-        for ref in inode.dbl_indirect_refs:
-            block_map[ref].append(inode.number)
-        for ref in inode.tpl_indirect_refs:
-            block_map[ref].append(inode.number)
-
-    if debug:
-        print("Displaying blocks and the inodes in which they are referenced...")
-        pprint(block_map)
-        for block, inode in block_map.items():
-            print("Block {} is referenced {} times...".format(block, len(block_map[block])))
-
-    tmp = dict() # block[i] = (ref_count, [list_of_inodes])
-    for block, inodes in block_map.items():
-        tmp[block] = (len(block_map[block]), block_map[block])
-
-    pprint(tmp)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage=LAB3USAGE, description=LAB3DESC)

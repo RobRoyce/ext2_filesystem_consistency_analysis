@@ -1,4 +1,7 @@
 import sys
+from enum import Enum
+from pprint import pprint
+
 
 class SuperBlockSummary:
     def __init__(self, report):
@@ -100,13 +103,104 @@ class IndirectBlockReference:
         self.block_nunmber_of_indirect = report[4]
         self.block_number_of_referenced_block = report[5]
 
+class Btype(Enum):
+    FREE = 0
+    DIRECT = 1
+    INDIRECT = 2
+    DOUBLE = 3
+    TRIPLE = 4
+
 class Block:
-    def __init__(self):
+    def __init__(self, n, t=Btype.FREE):
+        self.number = n
+        self.ref_count = 0
+        self.inode_refs = []
+        self.type = t
+
+class BlockMap:
+    def __init__(self, **kwargs):
+        self.block_map = dict()
+        self.block_list = list()
+        self.count = 0
+        self.size = 0
+
+        try:
+            self.block_list = kwargs['blocks']
+        except:
+            self.block_list = []
+
+        try:
+            self.size = kwargs['size']
+        except:
+            self.size = 0
+
+
+        for i in range(self.size):
+            self.block_map[i] = None
+
+        for block in self.block_list:
+            # TODO: verify assumption that we'll never get 2 blocks with same number but different contents
+            self.block_map[block.number] = block
+
+
+    def insert(self, block):
+        n = block.number
+        try:
+            tmp = self.block_map[n] # make sure it doesn't exist yet
+        except KeyError as e:
+            # does not exist, insert
+            pass
+
+    def set_free(self, free_block_entries):
+        for block_num in free_block_entries:
+            b = Block(block_num, Btype.FREE)
+            self.block_map[block_num] = b
+
+    def check_blocks(self):
         pass
+
+    def __str__(self):
+        s = ""
+        for i in range(self.size):
+            s += "{}: {}\n".format(i, self.block_map[i])
+        return s
+
+class InodeMap:
+    def __init__(self, **kwargs):
+        self.inode_map = dict()
+        self.count = 0
+        self.size = 0
+
+        try:
+            self.size = kwargs['size']
+        except:
+            self.size = 0
+
+        for i in range(self.size):
+            self.inode_map[i] = None
+
+    def insert(self, inode):
+        if self.count == self.size:
+            return False
+        elif self.inode_map[inode.number] == None:
+            self.inode_map[inode.number] = inode
+        else: # an entry already exists, what TODO?
+            pass
+
+    def get(self, k):
+        try:
+            return self.inode_map[k]
+        except:
+            return None
+
+    def set_free(self, free_inode_entries):
+        for inode_num in free_inode_entries:
+            pass # TODO
 
 class Inode:
     def __init__(self):
-        pass
+        self.number = 0
+
 
 class SuperBlock:
     def __init__(self):
