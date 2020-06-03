@@ -1,3 +1,5 @@
 *ccls*
 *pycache*
 .#*
+*.graffle
+spec/*.pptx
