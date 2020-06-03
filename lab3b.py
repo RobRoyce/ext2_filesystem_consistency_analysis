@@ -42,7 +42,8 @@ def main(filename):
     inode_summaries = list()
     directory_entries = list()
     indirect_references = list()
-    block_map = dict()
+    block_map = dict() # key: block number, value: list of tuple (block_no, type)
+    inode_map = dict() # key: inode number, value: list of tuple (inode_no, type)
 
     # read and parse the CSV file into constituent objects (based on TYPE field)
     contents = None
@@ -66,6 +67,13 @@ def main(filename):
                 elif label == INODE:
                     inode_summaries.append(InodeSummary(row))
 
+                    inodeNumber = row[1]
+                    if inodeNumber not in inode_map:
+                        inode_map[inodeNumber] = list()
+
+                    inodeType = 'UNALLOCATED' if (row[2] == 0) else 'ALLOCATED' 
+                    inode_map[inodeNumber].append((inodeNumber, inodeType))
+
                 elif label == DIRENT:
                     directory_entries.append(DirectoryEntry(row))
 
@@ -84,6 +92,17 @@ def main(filename):
             print("lab3b: unable to read {}.".format(filename))
         sys.exit(EXBADEXEC)
 
+
+    ifree_set = set([ifree.inode_number for ifree in free_inode_entries])
+
+    for (_, inodeList) in inode_map.items():
+        for (inodeNumber, inodeType) in inodeList:
+            print(inodeNumber, inodeType)
+            if inodeNumber in ifree_set and inodeType == 'ALLOCATED':
+                print("ALLOCATED INODE {} ON FREELIST".format(inodeNumber))
+            elif inodeNumber not in ifree_set and inodeType == 'UNALLOCATED':
+                print("UNALLOCATED INODE {} NOT ON FREELIST".format(inodeNumber))
+
     # Build map using block number as index and a list of inodes that reference
     # that block as items
 
@@ -91,30 +110,30 @@ def main(filename):
         print("Beginning block map initialization.")
         print("Number of blocks: {}".format(super_summary.n_blocks))
 
-    for i in range(0, super_summary.n_blocks):
-        block_map[i] = list()
+    # for i in range(0, super_summary.n_blocks):
+    #     block_map[i] = list()
 
-    for inode in inode_summaries:
-        for ref in inode.direct_refs:
-            block_map[ref].append(inode.number)
-        for ref in inode.indirect_refs:
-            block_map[ref].append(inode.number)
-        for ref in inode.dbl_indirect_refs:
-            block_map[ref].append(inode.number)
-        for ref in inode.tpl_indirect_refs:
-            block_map[ref].append(inode.number)
+    # for inode in inode_summaries:
+    #     for ref in inode.direct_refs:
+    #         block_map[ref].append(inode.number)
+    #     for ref in inode.indirect_refs:
+    #         block_map[ref].append(inode.number)
+    #     for ref in inode.dbl_indirect_refs:
+    #         block_map[ref].append(inode.number)
+    #     for ref in inode.tpl_indirect_refs:
+    #         block_map[ref].append(inode.number)
 
-    if debug:
-        print("Displaying blocks and the inodes in which they are referenced...")
-        pprint(block_map)
-        for block, inode in block_map.items():
-            print("Block {} is referenced {} times...".format(block, len(block_map[block])))
+    # if debug:
+    #     print("Displaying blocks and the inodes in which they are referenced...")
+    #     pprint(block_map)
+    #     for block, inode in block_map.items():
+    #         print("Block {} is referenced {} times...".format(block, len(block_map[block])))
 
-    tmp = dict() # block[i] = (ref_count, [list_of_inodes])
-    for block, inodes in block_map.items():
-        tmp[block] = (len(block_map[block]), block_map[block])
+    # tmp = dict() # block[i] = (ref_count, [list_of_inodes])
+    # for block, inodes in block_map.items():
+    #     tmp[block] = (len(block_map[block]), block_map[block])
 
-    pprint(tmp)
+    # pprint(tmp)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage=LAB3USAGE, description=LAB3DESC)

@@ -23,6 +23,10 @@ FILES = README Makefile $(MAIN.PY) $(DS.PY)
 # Targets #
 default: $(EXEC)
 
+$(EXEC):
+	echo './lab3b.py "$$@"' > lab3b
+	chmod +x lab3b
+
 check:
 	bash check.sh Makefile
 	bash check.sh README
@@ -35,8 +39,8 @@ clean:
 dist:
 	tar -czvf $(DIST) $(FILES)
 
-lab3b: $(MAIN.C)
-	$(PIP) install -r $(REQ)
+#lab3b: $(MAIN.C)
+#	$(PIP) install -r $(REQ)
 
 test: dist
 	cp $(DIST) $(TEST.D) && cd $(TEST.D) && bash $(TEST.SH) $(StudID)
