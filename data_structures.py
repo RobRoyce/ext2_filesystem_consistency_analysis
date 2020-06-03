@@ -2,79 +2,112 @@ import sys
 
 class SuperBlockSummary:
     def __init__(self, report):
-        self.__n_blocks = report[1]
-        self.__n_indoes = report[2]
-        self.__block_size = report[3]
-        self.__inode_size = report[4]
-        self.__blocks_per_group = report[5]
-        self.__inodes_per_group = report[6]
-        self.__first_non_reserved_inode = report[7]
+        self.n_blocks = int(report[1])
+        self.n_indoes = int(report[2])
+        self.block_size = int(report[3])
+        self.inode_size = int(report[4])
+        self.blocks_per_group = int(report[5])
+        self.inodes_per_group = int(report[6])
+        self.first_non_reserved_inode = int(report[7])
 
 class GroupSummary:
     def __init__(self, report):
-        self.__group_number = report[1]
-        self.__group_block_count = report[2]
-        self.__group_inode_count = report[3]
-        self.__n_free_blocks = report[4]
-        self.__n_free_inodes = report[5]
-        self.__free_block_bitmap_block_number = report[6]
-        self.__free_inode_bitmap_block_number = report[7]
-        self.__first_inode_block_number = report[8]
+        self.group_number = report[1]
+        self.group_block_count = report[2]
+        self.group_inode_count = report[3]
+        self.n_free_blocks = report[4]
+        self.n_free_inodes = report[5]
+        self.free_block_bitmap_block_number = report[6]
+        self.free_inode_bitmap_block_number = report[7]
+        self.first_inode_block_number = report[8]
 
 class FreeBlockEntry:
     def __init__(self, report):
-        self.__block_number = report[1]
+        self.block_number = report[1]
 
 class FreeInodeEntry:
     def __init__(self, report):
-        self.__inode_number = report[1]
+        self.inode_number = report[1]
 
 class InodeSummary:
     def __init__(self, report):
-        self.__inode_number = report[1]
-        self.__file_type = report[2]
-        self.__mode = report[3]
-        self.__owner = report[4]
-        self.__group = report[5]
-        self.__link_count = report[6]
-        self.__last_inode_change_time = report[7]
-        self.__last_modification_time = report[8]
-        self.__last_access_time = report[9]
-        self.__file_size = report[10]
-        self.__n_512_blocks = report[11]
+        self.number = int(report[1])
+        self.type = report[2]
+        self.mode = report[3]
+        self.owner = report[4]
+        self.group = report[5]
+        self.link_count = report[6]
+        self.last_inode_change_time = report[7]
+        self.last_modification_time = report[8]
+        self.last_access_time = report[9]
+        self.file_size = report[10]
+        self.n_512_blocks = report[11]
 
-        if self.__file_type == 'f' or self.__file_type == 'd':
+        self.direct_refs = list()
+        self.indirect_refs = list()
+        self.dbl_indirect_refs = list()
+        self.tpl_indirect_refs = list()
+
+        if self.type == 'f' or self.type == 'd':
             try:
-                self.__block_addr1 = report[12]
-                self.__block_addr2 = report[13]
-                self.__block_addr2 = report[14]
-                self.__block_addr3 = report[15]
-                self.__block_addr4 = report[16]
-                self.__block_addr5 = report[17]
-                self.__block_addr6 = report[18]
-                self.__block_addr7 = report[19]
-                self.__block_addr8 = report[20]
-                self.__block_addr9 = report[21]
-                self.__block_addr10 = report[22]
-                self.__block_addr11 = report[23]
-                self.__block_addr12 = report[24]
+                self.direct_refs.append(int(report[12]))
+                self.direct_refs.append(int(report[13]))
+                self.direct_refs.append(int(report[14]))
+                self.direct_refs.append(int(report[15]))
+                self.direct_refs.append(int(report[16]))
+                self.direct_refs.append(int(report[17]))
+                self.direct_refs.append(int(report[18]))
+                self.direct_refs.append(int(report[19]))
+                self.direct_refs.append(int(report[20]))
+                self.direct_refs.append(int(report[21]))
+                self.direct_refs.append(int(report[22]))
+                self.direct_refs.append(int(report[23]))
+
+                self.__populate_indir_refs(int(report[24]))
+                self.__populate_dbl_indir_refs(int(report[25]))
+                self.__populate_tpl_indir_refs(int(report[26]))
             except:
-                # TODO: Error out, these should all be valid for 'f' and 'd'
+                # TODO: Error out, these should only be valid for 'f' and 'd'
                 pass
+
+
+        def __populate_indir_refs(self, row):
+            # TODO
+            self.indirect_refs.append(row)
+
+        def __populate_dbl_indir_refs(self, row):
+            # TODO
+            self.dbl_indirect_refs.append(row)
+
+        def __populate_tpl_indir_refs(self, row):
+            # TODO
+            self.tpl_indirect_refs.append(row)
 
 class DirectoryEntry:
     def __init__(self, report):
-        self.__parent_inode_number = report[1]
-        self.__logical_byte_offset = report[2]
-        self.__inode_number_of_ref_file = report[3]
-        self.__entry_length = report[4]
-        self.__name_length = report[5]
-        self.__name = report[6]
+        self.parent_inode_number = report[1]
+        self.logical_byte_offset = report[2]
+        self.inode_number_of_ref_file = report[3]
+        self.entry_length = report[4]
+        self.name_length = report[5]
+        self.name = report[6]
 
 class IndirectBlockReference:
     def __init__(self, report):
-        self.__inode_number_of_owner = report[1]
-        self.__level_of_indirection = report[2]
-        self.__logical_block_offset = report[3]
-        self.__block_nunmber_of_indirect = report[4]
-        self.__block_number_of_referenced_block = report[5]
+        self.inode_number_of_owner = report[1]
+        self.level_of_indirection = report[2]
+        self.logical_block_offset = report[3]
+        self.block_nunmber_of_indirect = report[4]
+        self.block_number_of_referenced_block = report[5]
+
+class Block:
+    def __init__(self):
+        pass
+
+class Inode:
+    def __init__(self):
+        pass
+
+class SuperBlock:
+    def __init__(self):
+        pass

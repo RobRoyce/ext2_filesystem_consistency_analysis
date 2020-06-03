@@ -3,6 +3,8 @@
 # NAME: Robert Royce, Tyler Hackett
 # EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
 # ID: 705357270,405180956
+
+
 import argparse
 import csv
 import errno
@@ -40,6 +42,7 @@ def main(filename):
     inode_summaries = list()
     directory_entries = list()
     indirect_references = list()
+    block_map = dict()
 
     # read and parse the CSV file into constituent objects (based on TYPE field)
     contents = None
@@ -81,9 +84,37 @@ def main(filename):
             print("lab3b: unable to read {}.".format(filename))
         sys.exit(EXBADEXEC)
 
+    # Build map using block number as index and a list of inodes that reference
+    # that block as items
 
-    
+    if debug:
+        print("Beginning block map initialization.")
+        print("Number of blocks: {}".format(super_summary.n_blocks))
 
+    for i in range(0, super_summary.n_blocks):
+        block_map[i] = list()
+
+    for inode in inode_summaries:
+        for ref in inode.direct_refs:
+            block_map[ref].append(inode.number)
+        for ref in inode.indirect_refs:
+            block_map[ref].append(inode.number)
+        for ref in inode.dbl_indirect_refs:
+            block_map[ref].append(inode.number)
+        for ref in inode.tpl_indirect_refs:
+            block_map[ref].append(inode.number)
+
+    if debug:
+        print("Displaying blocks and the inodes in which they are referenced...")
+        pprint(block_map)
+        for block, inode in block_map.items():
+            print("Block {} is referenced {} times...".format(block, len(block_map[block])))
+
+    tmp = dict() # block[i] = (ref_count, [list_of_inodes])
+    for block, inodes in block_map.items():
+        tmp[block] = (len(block_map[block]), block_map[block])
+
+    pprint(tmp)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage=LAB3USAGE, description=LAB3DESC)
