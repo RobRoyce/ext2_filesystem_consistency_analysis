@@ -98,18 +98,27 @@ def main(filename):
                             block = getBlock(block_map, blockNumber)
                         else:
                             block = Block()
-
+                        
                         block.entryType = "FROM INODE"
                         
-                        if(iBlockIdx < 12): block.indLevel = 0
-                        elif(iBlockIdx == 12): block.indLevel = 1
-                        elif(iBlockIdx == 13): block.indLevel = 2
-                        elif(iBlockIdx == 14): block.indLevel = 3
+                        if(iBlockIdx < 12): 
+                            block.indLevel = 0
+                            block.offset = iBlockIdx
+                        elif(iBlockIdx == 12): 
+                            block.indLevel = 1
+                            block.offset = 12
+                        elif(iBlockIdx == 13): 
+                            block.indLevel = 2
+                            block.offset = 268
+                        elif(iBlockIdx == 14): 
+                            block.indLevel = 3
+                            block.offset = 65804
 
                         inode.blockRefs[blockNumber] = block
 
                         masterBlock = getBlock(block_map, blockNumber)
                         masterBlock.inodeRefs[inodeNumber] = inode
+                        masterBlock.entryType = block.entryType
 
                 elif label == DIRENT:
                     directory_entries.append(DirectoryEntry(row))
@@ -144,7 +153,7 @@ def main(filename):
         elif len(block.inodeRefs) > 1:
             for inodeNumber, inode in block.inodeRefs.items():
                 dupBlock = inode.blockRefs[blockNumber]
-                print("DUPLICATE {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[dupBlock.indLevel], blockNumber, inodeNumber, 0))
+                print("DUPLICATE {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[dupBlock.indLevel], blockNumber, inodeNumber, dupBlock.offset))
 
     # Detect unreferenced blocks
     inodesPerBlock = int(super_summary.block_size/super_summary.inode_size)
@@ -162,9 +171,9 @@ def main(filename):
 
         for blockNumber, block in inode.blockRefs.items():
             if blockNumber < 0 or blockNumber > super_summary.n_blocks:
-                print("INVALID {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[block.indLevel], blockNumber, inodeNumber, 0))
+                print("INVALID {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[block.indLevel], blockNumber, inodeNumber, block.offset))
             elif blockNumber < totalReservedBlocks and blockNumber > 0:
-                print("RESERVED {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[block.indLevel], blockNumber, inodeNumber, 0))
+                print("RESERVED {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[block.indLevel], blockNumber, inodeNumber, block.offset))
 
     # Detect unallocated inodes not on freelist
     for i in range(11, int(group_summary.group_inode_count) + 1):
