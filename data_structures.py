@@ -107,6 +107,7 @@ class Block:
         self.indLevel = -1
         self.offset = 0
         self.onFreeList = False
+        self.inodeRefs = {}
         self.metadata = {}
 
 class Inode:

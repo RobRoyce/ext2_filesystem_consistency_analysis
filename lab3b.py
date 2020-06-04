@@ -60,12 +60,7 @@ def main(filename):
 
                 elif label == BFREE:
 
-                    blockNumber = int(row[1])
-
-                    if blockNumber not in block_map:
-                        block = block_map[blockNumber] = Block()
-                    else:
-                        block = block_map[blockNumber]
+                    block = getBlock(block_map, int(row[1]))
 
                     block.entryType = BFREE
                     block.onFreeList = True
@@ -91,28 +86,37 @@ def main(filename):
                     inode.inodeType = row[2]
                     inode.linkCount = row[6]
                     inode.fileSize  = row[10]
-                    inode.metadata['i_blocks'] = row[12:28]
 
-                    for dataBlockNum in inode.metadata['i_blocks']:
+                    iblockData = [(i, row[12 + i]) for i in range(0,15)]
+
+                    for iBlockIdx, dataBlockNum in iblockData:
                         blockNumber = int(dataBlockNum)
+
+                        if blockNumber == 0: continue
+
                         if blockNumber not in block_map:
-                            block = block_map[blockNumber] = Block()
+                            block = getBlock(block_map, blockNumber)
                         else:
-                            block = block_map[blockNumber]
+                            block = Block()
 
                         block.entryType = "FROM INODE"
+                        
+                        if(iBlockIdx < 12): block.indLevel = 0
+                        elif(iBlockIdx == 12): block.indLevel = 1
+                        elif(iBlockIdx == 13): block.indLevel = 2
+                        elif(iBlockIdx == 14): block.indLevel = 3
 
+                        inode.blockRefs[blockNumber] = block
+
+                        masterBlock = getBlock(block_map, blockNumber)
+                        masterBlock.inodeRefs[inodeNumber] = inode
 
                 elif label == DIRENT:
                     directory_entries.append(DirectoryEntry(row))
 
                 elif label == INDIRECT:
 
-                    blockNumber = int(row[5])
-                    if blockNumber not in block_map:
-                        block = block_map[blockNumber] = Block()
-                    else:
-                        block = block_map[blockNumber]
+                    block = getBlock(block_map, int(row[5]))
 
                     block.entryType = INDIRECT
                     block.indLevel = int(row[2])
@@ -130,39 +134,62 @@ def main(filename):
             print("lab3b: unable to read {}.".format(filename))
         sys.exit(EXBADEXEC)
 
-    for (inodeNumber, inode) in inode_map.items():
-        if inode.inodeType != 's' or inode.fileSize > 60:
-            if not inode.onFreeList:
-                pass
-    
+    # Useful for converting block.indLevel values to human-readable strings
+    indLevelDict = {0: '', 1: 'INDIRECT ', 2: 'DOUBLE INDIRECT ', 3: 'TRIPLE INDIRECT '}
 
-
+    # Detect allocated blocks on freelist and duplicate blocks
     for (blockNumber, block) in block_map.items():
         if block.onFreeList and block.entryType != BFREE:
             print("ALLOCATED BLOCK {} ON FREELIST".format(blockNumber))
+        elif len(block.inodeRefs) > 1:
+            for inodeNumber, inode in block.inodeRefs.items():
+                dupBlock = inode.blockRefs[blockNumber]
+                print("DUPLICATE {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[dupBlock.indLevel], blockNumber, inodeNumber, 0))
 
+    # Detect unreferenced blocks
     inodesPerBlock = int(super_summary.block_size/super_summary.inode_size)
     totalInodeBlocks = int(super_summary.n_inodes/inodesPerBlock)
-    for i in range(int(group_summary.first_inode_block_number) + totalInodeBlocks, int(group_summary.group_block_count)):
+    totalReservedBlocks = int(group_summary.first_inode_block_number) + totalInodeBlocks
+    for i in range(totalReservedBlocks, int(group_summary.group_block_count)):
         if i not in block_map:
             print("UNREFERENCED BLOCK {}".format(i))
             
 
-    for (inodeNumber, inode) in inode_map.items():
+    # Detect allocated inodes on freelist and invalid block numbers
+    for inodeNumber, inode in inode_map.items():
         if inode.onFreeList and inode.inodeType != '':
             print("ALLOCATED INODE {} ON FREELIST".format(inodeNumber))
 
+        for blockNumber, block in inode.blockRefs.items():
+            if blockNumber < 0 or blockNumber > super_summary.n_blocks:
+                print("INVALID {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[block.indLevel], blockNumber, inodeNumber, 0))
+            elif blockNumber < totalReservedBlocks and blockNumber > 0:
+                print("RESERVED {}BLOCK {} IN INODE {} AT OFFSET {}".format(indLevelDict[block.indLevel], blockNumber, inodeNumber, 0))
+
+    # Detect unallocated inodes not on freelist
     for i in range(11, int(group_summary.group_inode_count) + 1):
         if i not in inode_map:
             print("UNALLOCATED INODE {} NOT ON FREELIST".format(i))
-            
-
-    # Build map using block number as index and a list of inodes that reference
-    # that block as items
 
     if debug:
         print("Beginning block map initialization.")
         print("Number of blocks: {}".format(super_summary.n_blocks))
+
+def getInode(map, number):
+    if number not in map:
+        inode = map[number] = Inode()
+    else:
+        inode = map[number]
+
+    return inode
+
+def getBlock(map, number):
+    if number not in map:
+        block = map[number] = Block()
+    else:
+        block = map[number]
+
+    return block
 
 
 if __name__ == '__main__':
