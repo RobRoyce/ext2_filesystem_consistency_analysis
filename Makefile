@@ -39,8 +39,5 @@ clean:
 dist:
 	tar -czvf $(DIST) $(FILES)
 
-#lab3b: $(MAIN.C)
-#	$(PIP) install -r $(REQ)
-
 test: dist
 	cp $(DIST) $(TEST.D) && cd $(TEST.D) && bash $(TEST.SH) $(StudID)

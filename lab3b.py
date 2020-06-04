@@ -79,9 +79,11 @@ def main(filename):
                     inode = getInode(inode_map, int(row[1]))
 
                     inode.onFreeList = True
+                    free_inode_entries.append(int(row[1]))
 
                 elif label == INODE:
-                    
+                    inode_summaries.append(InodeSummary(row))
+
                     inodeNumber = int(row[1])
                     inode = getInode(inode_map, inodeNumber)
 
@@ -101,19 +103,19 @@ def main(filename):
                                 block = getBlock(block_map, blockNumber)
                             else:
                                 block = Block()
-                            
+
                             block.entryType = "FROM INODE"
-                            
-                            if(iBlockIdx < 12): 
+
+                            if(iBlockIdx < 12):
                                 block.indLevel = 0
                                 block.offset = iBlockIdx
-                            elif(iBlockIdx == 12): 
+                            elif(iBlockIdx == 12):
                                 block.indLevel = 1
                                 block.offset = 12
-                            elif(iBlockIdx == 13): 
+                            elif(iBlockIdx == 13):
                                 block.indLevel = 2
                                 block.offset = 268
-                            elif(iBlockIdx == 14): 
+                            elif(iBlockIdx == 14):
                                 block.indLevel = 3
                                 block.offset = 65804
 
@@ -139,11 +141,11 @@ def main(filename):
 
     except IOError as x:
         if x.errno == errno.ENOENT: # does not exist
-            print("lab3b: {} does not exist.".format(filename))
+            sys.stderr.write("lab3b: {} does not exist.".format(filename))
         elif x.errno == errno.EACCESS:
-            print("lab3b: {} cannot be read.".format(filename))
+            sys.stderr.write("lab3b: {} cannot be read.".format(filename))
         else:
-            print("lab3b: unable to read {}.".format(filename))
+            sys.stderr.write("lab3b: unable to read {}.".format(filename))
         sys.exit(EXBADEXEC)
 
     # Useful for converting block.indLevel values to human-readable strings
@@ -165,12 +167,13 @@ def main(filename):
     for i in range(totalReservedBlocks, int(group_summary.group_block_count)):
         if i not in block_map:
             print("UNREFERENCED BLOCK {}".format(i))
-            
 
+    allocOnFreeList = list()
     # Detect allocated inodes on freelist and invalid block numbers
     for inodeNumber, inode in inode_map.items():
         if inode.onFreeList and inode.inodeType != '':
             print("ALLOCATED INODE {} ON FREELIST".format(inodeNumber))
+            allocOnFreeList.append(inodeNumber)
 
         for blockNumber, block in inode.blockRefs.items():
             if blockNumber < 0 or blockNumber > super_summary.n_blocks:
@@ -183,9 +186,41 @@ def main(filename):
         if i not in inode_map:
             print("UNALLOCATED INODE {} NOT ON FREELIST".format(i))
 
-    if debug:
-        print("Beginning block map initialization.")
-        print("Number of blocks: {}".format(super_summary.n_blocks))
+
+
+    #++++++++++++++++++++++++++++++++++++++++++++++++++
+    inodeLinks = dict()
+    inodeDefault = dict()
+    mismatch = list()
+    for i in range(super_summary.n_inodes):
+        inodeLinks[i] = 0
+        inodeDefault[i] = [0, 0]
+
+    for dirent in directory_entries:
+        if dirent.inode_ref in free_inode_entries and dirent.inode_ref not in allocOnFreeList:
+            print("DIRECTORY INODE {} NAME {} UNALLOCATED INODE {}".format(
+                dirent.parent_inode, dirent.name, dirent.inode_ref))
+            continue
+
+        if dirent.name == "'.'" or (dirent.name == "'..'" and dirent.parent_inode == 2):
+            if dirent.inode_ref != dirent.parent_inode:
+                print("DIRECTORY INODE {} NAME {} LINK TO INODE {} SHOULD BE {}".format(
+                    dirent.parent_inode, dirent.name, dirent.inode_ref, dirent.parent_inode))
+
+        try:
+            inodeLinks[dirent.inode_ref] += 1
+
+        except KeyError as e:
+            # handles dirent's that reference invalid inodes
+            print("DIRECTORY INODE {} NAME {} INVALID INODE {}".format(
+                dirent.parent_inode, dirent.name, dirent.inode_ref))
+
+
+    for inode in inode_summaries:
+        if inodeLinks[inode.number] != inode.link_count:
+            print("INODE {} HAS {} LINKS BUT LINKCOUNT IS {}".format(
+                inode.number, inodeLinks[inode.number], inode.link_count))
+
 
 def getInode(map, number):
     if number not in map:
@@ -208,6 +243,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage=LAB3USAGE, description=LAB3DESC)
     parser.add_argument("filename", help=LAB3FILEHELP)
     parser.add_argument("--debug", "-d", action='store_const', const=True, default=False)
-    args = parser.parse_args()
+
+    try:
+        args = parser.parse_args()
+    except SystemExit:
+        exit(EXBADEXEC)
+
     debug = args.debug
     main(args.filename)

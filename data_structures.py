@@ -33,15 +33,15 @@ class InodeSummary:
     def __init__(self, report):
         self.number = int(report[1])
         self.type = report[2]
-        self.mode = report[3]
+        self.mode = int(report[3])
         self.owner = report[4]
-        self.group = report[5]
-        self.link_count = report[6]
+        self.group = int(report[5])
+        self.link_count = int(report[6])
         self.last_inode_change_time = report[7]
         self.last_modification_time = report[8]
         self.last_access_time = report[9]
         self.file_size = report[10]
-        self.n_512_blocks = report[11]
+        self.n_512_blocks = int(report[11])
 
         self.direct_refs = list()
         self.indirect_refs = list()
@@ -85,11 +85,11 @@ class InodeSummary:
 
 class DirectoryEntry:
     def __init__(self, report):
-        self.parent_inode_number = report[1]
-        self.logical_byte_offset = report[2]
-        self.inode_number_of_ref_file = report[3]
-        self.entry_length = report[4]
-        self.name_length = report[5]
+        self.parent_inode = int(report[1])
+        self.logical_byte_offset = int(report[2])
+        self.inode_ref = int(report[3])
+        self.entry_length = int(report[4])
+        self.name_length = int(report[5])
         self.name = report[6]
 
 class IndirectBlockReference:
