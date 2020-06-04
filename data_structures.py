@@ -3,7 +3,7 @@ import sys
 class SuperBlockSummary:
     def __init__(self, report):
         self.n_blocks = int(report[1])
-        self.n_indoes = int(report[2])
+        self.n_inodes = int(report[2])
         self.block_size = int(report[3])
         self.inode_size = int(report[4])
         self.blocks_per_group = int(report[5])
@@ -101,12 +101,23 @@ class IndirectBlockReference:
         self.block_number_of_referenced_block = report[5]
 
 class Block:
+
     def __init__(self):
-        pass
+        self.entryType = ''
+        self.indLevel = -1
+        self.offset = 0
+        self.onFreeList = False
+        self.metadata = {}
 
 class Inode:
     def __init__(self):
-        pass
+        self.inodeType = ''
+        self.linkCount = 0
+        self.fileSize = 0
+        self.onFreeList = False
+        self.dirRefs = {}
+        self.blockRefs = {}
+        self.metadata = {}
 
 class SuperBlock:
     def __init__(self):
