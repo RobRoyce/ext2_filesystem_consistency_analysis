@@ -42,6 +42,15 @@ def main(filename):
     inode_summaries = list()
     directory_entries = list()
     indirect_references = list()
+
+    ####
+    # block_map: a dictionary mapping all referenced block numbers to a Block object
+    #
+    # If a block is referenced in multiple INODE entries (e.g. a duplicate), then the
+    # block_map entry for the corresponding block number returns the Block associated
+    # with the first such INODE entry.
+    #
+    ####
     block_map = dict()
     inode_map = dict()
 
@@ -67,21 +76,14 @@ def main(filename):
 
                 elif label == IFREE:
 
-                    inodeNumber = int(row[1])
-                    if inodeNumber not in inode_map:
-                        inode = inode_map[inodeNumber] = Inode()
-                    else:
-                        inode = inode_map[inodeNumber]
+                    inode = getInode(inode_map, int(row[1]))
 
                     inode.onFreeList = True
 
                 elif label == INODE:
-
+                    
                     inodeNumber = int(row[1])
-                    if inodeNumber not in inode_map:
-                        inode = inode_map[inodeNumber] = Inode()
-                    else:
-                        inode = inode_map[inodeNumber]
+                    inode = getInode(inode_map, inodeNumber)
 
                     inode.inodeType = row[2]
                     inode.linkCount = row[6]
