@@ -86,41 +86,42 @@ def main(filename):
                     inode = getInode(inode_map, inodeNumber)
 
                     inode.inodeType = row[2]
-                    inode.linkCount = row[6]
-                    inode.fileSize  = row[10]
+                    inode.linkCount = int(row[6])
+                    inode.fileSize  = int(row[10])
 
-                    iblockData = [(i, row[12 + i]) for i in range(0,15)]
+                    if inode.inodeType != 's' or inode.fileSize > 60:
+                        iblockData = [(i, row[12 + i]) for i in range(0,15)]
 
-                    for iBlockIdx, dataBlockNum in iblockData:
-                        blockNumber = int(dataBlockNum)
+                        for iBlockIdx, dataBlockNum in iblockData:
+                            blockNumber = int(dataBlockNum)
 
-                        if blockNumber == 0: continue
+                            if blockNumber == 0: continue
 
-                        if blockNumber not in block_map:
-                            block = getBlock(block_map, blockNumber)
-                        else:
-                            block = Block()
-                        
-                        block.entryType = "FROM INODE"
-                        
-                        if(iBlockIdx < 12): 
-                            block.indLevel = 0
-                            block.offset = iBlockIdx
-                        elif(iBlockIdx == 12): 
-                            block.indLevel = 1
-                            block.offset = 12
-                        elif(iBlockIdx == 13): 
-                            block.indLevel = 2
-                            block.offset = 268
-                        elif(iBlockIdx == 14): 
-                            block.indLevel = 3
-                            block.offset = 65804
+                            if blockNumber not in block_map:
+                                block = getBlock(block_map, blockNumber)
+                            else:
+                                block = Block()
+                            
+                            block.entryType = "FROM INODE"
+                            
+                            if(iBlockIdx < 12): 
+                                block.indLevel = 0
+                                block.offset = iBlockIdx
+                            elif(iBlockIdx == 12): 
+                                block.indLevel = 1
+                                block.offset = 12
+                            elif(iBlockIdx == 13): 
+                                block.indLevel = 2
+                                block.offset = 268
+                            elif(iBlockIdx == 14): 
+                                block.indLevel = 3
+                                block.offset = 65804
 
-                        inode.blockRefs[blockNumber] = block
+                            inode.blockRefs[blockNumber] = block
 
-                        masterBlock = getBlock(block_map, blockNumber)
-                        masterBlock.inodeRefs[inodeNumber] = inode
-                        masterBlock.entryType = block.entryType
+                            masterBlock = getBlock(block_map, blockNumber)
+                            masterBlock.inodeRefs[inodeNumber] = inode
+                            masterBlock.entryType = block.entryType
 
                 elif label == DIRENT:
                     directory_entries.append(DirectoryEntry(row))
