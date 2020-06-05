@@ -1,3 +1,7 @@
+# NAME: Robert Royce, Tyler Hackett
+# EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
+# ID: 705357270,405180956
+
 import sys
 
 class SuperBlockSummary:
@@ -119,7 +123,3 @@ class Inode:
         self.dirRefs = {}
         self.blockRefs = {}
         self.metadata = {}
-
-class SuperBlock:
-    def __init__(self):
-        pass
