@@ -85,9 +85,9 @@ def main(filename):
     inodeLinks = dict()
 
     # block_map: a dictionary mapping all referenced block numbers to a Block object.
-    # If a block is referenced in multiple INODE entries (e.g. a
-    # duplicate), then the block_map entry for the corresponding block number
-    # returns the Block associated with the first such INODE entry.
+    # If a block is referenced in multiple entries (i.e. a duplicate), then the 
+    # block_map entry for the corresponding block number returns the Block 
+    # associated with the first such INODE entry.
     block_map = dict()
     inode_map = dict()
 
@@ -163,10 +163,25 @@ def main(filename):
                     directory_entries.append(DirectoryEntry(row))
 
                 elif label == INDIRECT:
-                    block = getBlock(block_map, int(row[5]))
+                    blockNumber = int(row[5])
+
+                    if blockNumber not in block_map:
+                        block = getBlock(block_map, blockNumber)
+                    else:
+                        block = Block()
+
                     block.entryType = INDIRECT
                     block.indLevel = int(row[2])
                     block.offset = int(row[3])
+
+                    inodeNumber = int(row[1])
+                    owner = getInode(inode_map, inodeNumber)
+
+                    owner.blockRefs[blockNumber] = block
+                    masterBlock = getBlock(block_map, blockNumber)
+                    masterBlock.inodeRefs[inodeNumber] = owner
+                    masterBlock.entryType = block.entryType
+
                 else: #TODO error!
                     pass
 
@@ -230,7 +245,7 @@ def main(filename):
             print(INODE_ALLOCATION_1.format(inodeNumber))
             allocOnFreeList.append(inodeNumber)
 
-        # INVALID T BLOCK X IN INODE Y AT OFFSET O
+        # INVALID T BLOCK X IN INODE Y AT OFFSET Z
         # --------------------------------------------------
         for blockNumber, block in inode.blockRefs.items():
             if blockNumber < 0 or blockNumber > super_summary.n_blocks:
@@ -240,7 +255,7 @@ def main(filename):
                     inodeNumber,
                     block.offset))
 
-        # RESERVED T BLOCK X IN INODE Y AT OFFSET O
+        # RESERVED T BLOCK X IN INODE Y AT OFFSET Z
         # --------------------------------------------------
             elif blockNumber < totalReservedBlocks and blockNumber > 0:
                 print(BLOCK_CONSISTENCY_2.format(
