@@ -13,35 +13,44 @@ import sys
 from data_structures import *
 from pprint import pprint
 
-# Command Line Messages
-LAB3USAGE = "Lab3b filename"
-LAB3DESC = "Parses EXT2 dump files and checks for consistency and integrity."
-LAB3FILEHELP = "The file to be analyzed."
 
-# Exit Codes
-EXSUCCESS = 0
-EXBADEXEC = 1
-EXINCONSISTENT = 2
+# --------------------------------------------------Command Line Messages
+LAB3_USAGE = "Lab3b filename"
+LAB3_DESCRIPTION = "Parses EXT2 dump files and checks for consistency and integrity."
+LAB3_FILE_ARG_HELP = "The file to be analyzed."
 
-# File read error messages
-ERR_DNE = "lab3b: {} does not exist."
-ERR_CNR = "lab3b: {} cannot be read."
-ERR_UTR = "lab3b: unable to read {}."
+# --------------------------------------------------Exit Codes
+EX_SUCCESS = 0
+EX_BAD_EXECUTION = 1
+EX_INCONSISTENT = 2
 
-# Report Formats
-REP_ABOF = "ALLOCATED BLOCK {} ON FREELIST"
-REP_AIOF = "ALLOCATED INODE {} ON FREELIST"
-REP_DBIIAO = "DUPLICATE {}BLOCK {} IN INODE {} AT OFFSET {}"
-REP_DINII = "DIRECTORY INODE {} NAME {} INVALID INODE {}"
-REP_DINLTISB = "DIRECTORY INODE {} NAME {} LINK TO INODE {} SHOULD BE {}"
-REP_DINUI = "DIRECTORY INODE {} NAME {} UNALLOCATED INODE {}"
-REP_IBIAO = "INVALID {}BLOCK {} IN INODE {} AT OFFSET {}"
-REP_IHLBLI = "INODE {} HAS {} LINKS BUT LINKCOUNT IS {}"
-REP_RBIAO = "RESERVED {}BLOCK {} IN INODE {} AT OFFSET {}"
-REP_UINOF = "UNALLOCATED INODE {} NOT ON FREELIST"
-REP_URB = "UNREFERENCED BLOCK {}"
+# --------------------------------------------------File I/O Errors
+FILE_DOES_NOT_EXIST = "lab3b: {} does not exist."
+FILE_CANNOT_BE_READ = "lab3b: {} cannot be read."
+FILE_UN_READABLE = "lab3b: unable to read {}."
 
-# Field Name Constants
+# --------------------------------------------------Report Formats
+# Block Consistency Audits
+BLOCK_CONSISTENCY_1 = "INVALID {}BLOCK {} IN INODE {} AT OFFSET {}"
+BLOCK_CONSISTENCY_2 = "RESERVED {}BLOCK {} IN INODE {} AT OFFSET {}"
+BLOCK_CONSISTENCY_3 = "UNREFERENCED BLOCK {}"
+BLOCK_CONSISTENCY_4 = "ALLOCATED BLOCK {} ON FREELIST"
+BLOCK_CONSISTENCY_5 = "DUPLICATE {}BLOCK {} IN INODE {} AT OFFSET {}"
+
+# Inode Allocation Audits
+INODE_ALLOCATION_1 = "ALLOCATED INODE {} ON FREELIST"
+INODE_ALLOCATION_2 = "UNALLOCATED INODE {} NOT ON FREELIST"
+
+# Directory Consistency Audits
+DIRECTORY_CONSISTENCY_1 = "INODE {} HAS {} LINKS BUT LINKCOUNT IS {}"
+DIRECTORY_CONSISTENCY_2 = "DIRECTORY INODE {} NAME {} INVALID INODE {}"
+DIRECTORY_CONSISTENCY_4 = "DIRECTORY INODE {} NAME {} LINK TO INODE {} SHOULD BE {}"
+DIRECTORY_CONSISTENCY_3 = "DIRECTORY INODE {} NAME {} UNALLOCATED INODE {}"
+
+
+
+
+# --------------------------------------------------CSV Field Name Constants
 SUPERBLOCK = 'SUPERBLOCK'
 GROUP = 'GROUP'
 BFREE = 'BFREE'
@@ -50,6 +59,7 @@ INODE = 'INODE'
 DIRENT = 'DIRENT'
 INDIRECT = 'INDIRECT'
 
+# -------------------------------------------------- Block Type Map
 # Useful for converting block.indLevel values to human-readable strings
 indLevelDict = {
     0: '',
@@ -58,6 +68,7 @@ indLevelDict = {
     3: 'TRIPLE INDIRECT '
 }
 
+# --------------------------------------------------Debug Flag (--debug | --d)
 debug = False
 
 
@@ -72,7 +83,6 @@ def main(filename):
     allocOnFreeList = list()
     mismatch = list()
     inodeLinks = dict()
-
 
     # block_map: a dictionary mapping all referenced block numbers to a Block object.
     # If a block is referenced in multiple INODE entries (e.g. a
@@ -130,6 +140,7 @@ def main(filename):
 
                             block.entryType = "FROM INODE"
 
+                            # Set the level of indirection and logical offset
                             if(iBlockIdx < 12):
                                 block.indLevel = 0
                                 block.offset = iBlockIdx
@@ -160,13 +171,25 @@ def main(filename):
                     pass
 
     except IOError as x:
-        if x.errno == errno.ENOENT: # does not exist
-            sys.stderr.write(ERR_DNE.format(filename))
-        elif x.errno == errno.EACCESS: # no read permission
-            sys.stderr.write(ERR_CNR.format(filename))
-        else: # other error
-            sys.stderr.write(ERR_UTR.format(filename))
-        sys.exit(EXBADEXEC)
+        # Does not exist
+        if x.errno == errno.ENOENT:
+            sys.stderr.write(FILE_DOES_NOT_EXIST.format(filename))
+
+        # No read permissions
+        elif x.errno == errno.EACCESS:
+            sys.stderr.write(FILE_CANNOT_BE_READ.format(filename))
+
+        # Any other error
+        else:
+            sys.stderr.write(FILE_UN_READABLE.format(filename))
+        sys.exit(EX_BAD_EXECUTION)
+
+
+    # --------------------------------------------------
+    # Begin Inference
+    inodesPerBlock = int(super_summary.block_size/super_summary.inode_size)
+    totalInodeBlocks = int(super_summary.n_inodes/inodesPerBlock)
+    totalReservedBlocks = int(group_summary.first_inode_block_number) + totalInodeBlocks
 
 
     # --------------------------------------------------
@@ -176,7 +199,7 @@ def main(filename):
         # ALLOCATED BLOCK X ON FREELIST
         # --------------------------------------------------
         if block.onFreeList and block.entryType != BFREE:
-            print(REP_ABOF.format(blockNumber))
+            print(BLOCK_CONSISTENCY_4.format(blockNumber))
 
         # DUPLICATE X BLOCK Y IN INODE Z AT OFFSET O
         # --------------------------------------------------
@@ -184,21 +207,17 @@ def main(filename):
             for inodeNumber, inode in block.inodeRefs.items():
                 dupBlock = inode.blockRefs[blockNumber]
 
-                print(REP_DBIIAO.format(
+                print(BLOCK_CONSISTENCY_5.format(
                     indLevelDict[dupBlock.indLevel],
                     blockNumber,
                     inodeNumber,
                     dupBlock.offset))
 
-
     # --------------------------------------------------
     # UNREFERENCED BLOCK X
-    inodesPerBlock = int(super_summary.block_size/super_summary.inode_size)
-    totalInodeBlocks = int(super_summary.n_inodes/inodesPerBlock)
-    totalReservedBlocks = int(group_summary.first_inode_block_number) + totalInodeBlocks
     for i in range(totalReservedBlocks, int(group_summary.group_block_count)):
         if i not in block_map:
-            print(REP_URB.format(i))
+            print(BLOCK_CONSISTENCY_3.format(i))
 
 
     # --------------------------------------------------
@@ -208,14 +227,14 @@ def main(filename):
         # ALLOCATED INODE X ON FREELIST
         # --------------------------------------------------
         if inode.onFreeList and inode.inodeType != '':
-            print(REP_AIOF.format(inodeNumber))
+            print(INODE_ALLOCATION_1.format(inodeNumber))
             allocOnFreeList.append(inodeNumber)
 
         # INVALID T BLOCK X IN INODE Y AT OFFSET O
         # --------------------------------------------------
         for blockNumber, block in inode.blockRefs.items():
             if blockNumber < 0 or blockNumber > super_summary.n_blocks:
-                print(REP_IBIAO.format(
+                print(BLOCK_CONSISTENCY_1.format(
                     indLevelDict[block.indLevel],
                     blockNumber,
                     inodeNumber,
@@ -224,7 +243,7 @@ def main(filename):
         # RESERVED T BLOCK X IN INODE Y AT OFFSET O
         # --------------------------------------------------
             elif blockNumber < totalReservedBlocks and blockNumber > 0:
-                print(REP_RBIAO.format(
+                print(BLOCK_CONSISTENCY_2.format(
                     indLevelDict[block.indLevel],
                     blockNumber,
                     inodeNumber,
@@ -235,7 +254,7 @@ def main(filename):
     # Detect unallocated inodes not on freelist
     for i in range(11, int(group_summary.group_inode_count) + 1):
         if i not in inode_map:
-            print(REP_UINOF.format(i))
+            print(INODE_ALLOCATION_2.format(i))
 
 
     # --------------------------------------------------
@@ -249,7 +268,7 @@ def main(filename):
         # Occurs when an inode appears in the free list but also appears in a DIRENT
         # --------------------------------------------------
         if dirent.inode_ref in free_inode_entries and dirent.inode_ref not in allocOnFreeList:
-            print(REP_DINUI.format(
+            print(DIRECTORY_CONSISTENCY_3.format(
                 dirent.parent_inode,
                 dirent.name,
                 dirent.inode_ref))
@@ -261,7 +280,7 @@ def main(filename):
         # --------------------------------------------------
         if dirent.name == "'.'" or (dirent.name == "'..'" and dirent.parent_inode == 2):
             if dirent.inode_ref != dirent.parent_inode:
-                print(REP_DINLTISB.format(
+                print(DIRECTORY_CONSISTENCY_4.format(
                     dirent.parent_inode,
                     dirent.name,
                     dirent.inode_ref,
@@ -273,7 +292,7 @@ def main(filename):
         try:
             inodeLinks[dirent.inode_ref] += 1
         except KeyError as e:
-            print(REP_DINII.format(
+            print(DIRECTORY_CONSISTENCY_2.format(
                 dirent.parent_inode,
                 dirent.name,
                 dirent.inode_ref))
@@ -284,7 +303,7 @@ def main(filename):
     # --------------------------------------------------
     for inode in inode_summaries:
         if inodeLinks[inode.number] != inode.link_count:
-            print(REP_IHLBLI.format(
+            print(DIRECTORY_CONSISTENCY_1.format(
                 inode.number,
                 inodeLinks[inode.number],
                 inode.link_count))
@@ -308,15 +327,15 @@ def getBlock(map, number):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(usage=LAB3USAGE, description=LAB3DESC)
-    parser.add_argument("filename", help=LAB3FILEHELP)
+    parser = argparse.ArgumentParser(usage=LAB3_USAGE, description=LAB3_DESCRIPTION)
+    parser.add_argument("filename", help=LAB3_FILE_ARG_HELP)
     parser.add_argument("--debug", "-d", action='store_const', const=True, default=False)
 
     # try/except needed to force custom exit code
     try:
         args = parser.parse_args()
     except SystemExit:
-        exit(EXBADEXEC)
+        exit(EX_BAD_EXECUTION)
 
     debug = args.debug
     main(args.filename)
