@@ -73,6 +73,7 @@ debug = False
 
 
 def main(filename):
+    # Variables used to parse/store the contents of the CSV input file
     super_summary = None
     group_summary = None
     free_block_entries = list()
@@ -80,23 +81,24 @@ def main(filename):
     inode_summaries = list()
     directory_entries = list()
     indirect_references = list()
+
+    # Miscellaneous variables used to keep track of specific relationships
     allocOnFreeList = list()
     mismatch = list()
     inodeLinks = dict()
 
     # block_map: a dictionary mapping all referenced block numbers to a Block object.
-    # If a block is referenced in multiple entries (i.e. a duplicate), then the 
-    # block_map entry for the corresponding block number returns the Block 
+    #
+    # If a block is referenced in multiple entries (i.e. a duplicate), then the
+    # block_map entry for the corresponding block number returns the Block
     # associated with the first such INODE entry.
     block_map = dict()
     inode_map = dict()
 
 
-    # -------------------------------------------------- The following try
-    # block constructs various structures that are later used to generate
-    # reports. Note that we use the except block to produce custom error
-    # messages
-    contents = None
+    # The following try block constructs various structures that are later used
+    # to generate reports. Note that we use the except block to produce custom
+    # error messages if the file fails to read correctly
     try:
         with open(filename, mode='r', newline='') as f:
             for row in csv.reader(f):
@@ -119,12 +121,13 @@ def main(filename):
                     free_inode_entries.append(int(row[1]))
 
                 elif label == INODE:
-                    inode_summaries.append(InodeSummary(row))
                     inodeNumber = int(row[1])
                     inode = getInode(inode_map, inodeNumber)
                     inode.inodeType = row[2]
                     inode.linkCount = int(row[6])
                     inode.fileSize  = int(row[10])
+
+                    inode_summaries.append(InodeSummary(row))
 
                     if inode.inodeType != 's' or inode.fileSize > 60:
                         iblockData = [(i, row[12 + i]) for i in range(0,15)]
@@ -202,13 +205,14 @@ def main(filename):
 
     # --------------------------------------------------
     # Begin Inference
-    inodesPerBlock = int(super_summary.block_size/super_summary.inode_size)
-    totalInodeBlocks = int(super_summary.n_inodes/inodesPerBlock)
+    inodesPerBlock = int(super_summary.block_size / super_summary.inode_size)
+    totalInodeBlocks = int(super_summary.n_inodes / inodesPerBlock)
     totalReservedBlocks = int(group_summary.first_inode_block_number) + totalInodeBlocks
 
 
     # --------------------------------------------------
-    # Detect allocated blocks on freelist and duplicate blocks
+    # Iterate over the entire Block Map to detect allocated blocks on freelist
+    # and duplicates
     for (blockNumber, block) in block_map.items():
 
         # ALLOCATED BLOCK X ON FREELIST
@@ -227,6 +231,7 @@ def main(filename):
                     blockNumber,
                     inodeNumber,
                     dupBlock.offset))
+
 
     # --------------------------------------------------
     # UNREFERENCED BLOCK X
