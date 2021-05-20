@@ -1,7 +1,7 @@
 #NAME: Robert Royce, Tyler Hackett
 #EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
 #ID: 705357270,405180956
-.PHONY: check clean dist
+.PHONY: check clean dist test
 
 # List of Constants #
 DIST = lab3b-705357270.tar.gz
@@ -10,7 +10,6 @@ EXEC = lab3b
 MAIN.PY = lab3b.py
 PIP = pip3
 PY = python3
-REQ = requirements.txt
 StudID = 705357270
 TEST.D = test/
 TEST.SH = P3B_check.sh
@@ -23,6 +22,10 @@ FILES = README Makefile $(MAIN.PY) $(DS.PY)
 # Targets #
 default: $(EXEC)
 
+$(EXEC):
+	echo './lab3b.py "$$@"' > lab3b
+	chmod +x lab3b
+
 check:
 	bash check.sh Makefile
 	bash check.sh README
@@ -34,9 +37,6 @@ clean:
 
 dist:
 	tar -czvf $(DIST) $(FILES)
-
-lab3b: $(MAIN.C)
-	$(PIP) install -r $(REQ)
 
 test: dist
 	cp $(DIST) $(TEST.D) && cd $(TEST.D) && bash $(TEST.SH) $(StudID)

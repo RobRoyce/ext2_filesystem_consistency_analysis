@@ -6,10 +6,33 @@
 List of Included Files
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+- README :: This file.
+  - Makefile :: Contains targets [default check, clean, dist, test]
+  - lab3b.py :: Contains the `main` program
+  - data_structures.py :: Contains several `class` declarations
+
 
 Description of Lab3B
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+Python was the language of choice for our implementation of Lab3b. We use the
+vanilla `csv` library to read in the CSV files, check the file for standard I/O
+errors, and finally parse each row into a corresponding object (i.e. there is a
+dedicated class for each type of row entry). We make heavy use of the `dict`
+class, especially for keeping track of pertinent Inode and Block metadata and
+references.
+
+After the appropriate structures are constructed from the raw CSV data, it is
+simply a matter of iterating over the relevant structures to generate our
+desired output. In general, there is not a one-to-one correspondance between
+desired output and the data fields required to generate them. As such, we don't
+follow a strict order of operations (i.e. desired output is not neccessarily
+printed in the order in which it appears in the project specification). Instead,
+we took an opportunistic approach and attempted to minimize the number of data
+structures that needed to be referenced in order to print any particular output.
+
 
 References
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+We did not rely upon any external references during development.
