@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-# NAME: Robert Royce, Tyler Hackett
-# EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
-# ID: 705357270,405180956
-
 # Check for project submission headers (name, email, id)
 NAME1="Rob Royce"
 NAME2="Tyler Hackett"
