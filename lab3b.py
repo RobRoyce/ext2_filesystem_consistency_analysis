@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-# NAME: Robert Royce, Tyler Hackett
-# EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
-# ID: 705357270,405180956
-
-
 import argparse
 import csv
 import errno
