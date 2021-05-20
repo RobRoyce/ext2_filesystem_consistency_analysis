@@ -66,7 +66,7 @@ indLevelDict = {
     1: 'INDIRECT ',
     2: 'DOUBLE INDIRECT ',
     3: 'TRIPLE INDIRECT '
-}
+
 
 # --------------------------------------------------Debug Flag (--debug | --d)
 debug = False
@@ -344,6 +344,7 @@ def getBlock(map, number):
         block = map[number]
 
     return block
+
 
 
 if __name__ == '__main__':
